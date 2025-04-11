@@ -11,8 +11,8 @@ df = pd.read_excel('重金属.xlsx', sheet_name='Sheet3')
 # DataFrame的概念，类似于Excel表格，有行和列的结构，方便后续处理
 # 返回值df的数据类型：pandas.DataFrame
 
-# 2. 处理目标变量：将group中的2（对照）转为0，1（病例）保持为1
-df['group'] = df['group'].replace(2, 0)
+# 2. 处理目标变量：将group(2对照,1病例)中的2（对照）转为0，1（病例）保持为1
+df['group(2对照,1病例)'] = df['group(2对照,1病例)'].replace(2, 0)
 # Pandas的操作通常不是原地修改(Pandas默认返回新对象)
 # 所以需要赋值，即返回修改后的新Series对象
 
@@ -20,7 +20,7 @@ df['group'] = df['group'].replace(2, 0)
 for col in ['sex', 'drink', 'smk', 'family']:
     df[col] = df[col].replace(2, 0)
 # 针对[]里的每个指定列，将2替换为0
-# 为什么不合并group这一列
+# 为什么不合并group(2对照,1病例)这一列
 
 # 4. 删除无关列：ID列不参与建模(防止这些非特征数据干扰模型训练)
 df.drop('ID', axis=1, inplace=True)
@@ -70,6 +70,10 @@ for col in numeric_cols:  # 遍历所有数值型列
         # 适用场景：适合存在偏态分布的数值数据（如收入数据）
         # 抗噪性：不受极端值影响（若数据中有极大 / 极小异常值，中位数比均值更稳定）
         df[col].fillna(df[col].median(), inplace=True)
+        # fillna() 是 pandas 中用于填充缺失值（NaN）的核心方法，
+        # 适用于 DataFrame 和 Series
+        # 用列均值填充且直接修改————df[col].fillna(df[col].median(), inplace=True)
+        # 所有NaN替换为0————df.fillna(0)
 
 # 分类列处理
 for col in categorical_cols:  # 遍历所有分类型列
@@ -81,19 +85,19 @@ for col in categorical_cols:  # 遍历所有分类型列
         df[col].fillna(df[col].mode()[0], inplace=True)
 
 # 7. 划分数据集
-X = df.drop('group', axis=1)
-y = df['group']
+X = df.drop('group(2对照,1病例)', axis=1)
+y = df['group(2对照,1病例)']
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.3, stratify=y, random_state=42
 )
 # df.drop()：Pandas DataFrame的列删除方法
-# 'group'：要删除的目标列名
+# 'group(2对照,1病例)'：要删除的目标列名
 # axis=1：指定操作方向为列（axis=0是行操作）
-# 创建特征矩阵X，移除原始数据中的目标变量列（'group'）
-# 相当于：X = df[所有列] - 'group'列
+# 创建特征矩阵X，移除原始数据中的目标变量列（'group(2对照,1病例)'）
+# 相当于：X = df[所有列] - 'group(2对照,1病例)'列
 # 输出数据类型：pandas DataFrame（保持多列结构）
 
-# df['group']：单列选择语法
+# df['group(2对照,1病例)']：单列选择语法
 # 无参数方法直接提取列数据
 # 创建目标变量y，即需要预测的标签列
 # 输出数据类型：pandas Series（单列结构）
