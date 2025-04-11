@@ -5,25 +5,24 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-# 1. 读取Excel文件
+# 1.1. 读取Excel文件
 df = pd.read_excel('重金属.xlsx', sheet_name='Sheet3')
 # pandas中的read_excel()方法————>功能：专门解析Excel文件的函数，将表格结构转换为内存中的DataFrame对象
-# df应该是一个DataFrame对象，也就是二维的表格型数据结构，
-# 有行和列的结构，类似于Excel表格，方便后续处理
+# DataFrame的概念，类似于Excel表格，有行和列的结构，方便后续处理
 # 返回值df的数据类型：pandas.DataFrame
 
-# 2. 处理目标变量：将group(2对照,1病例)中的2（对照）转为0，1（病例）保持为1
+# 1.2. 处理目标变量：将group(2对照,1病例)中的2（对照）转为0，1（病例）保持为1
 df['group(2对照,1病例)'] = df['group(2对照,1病例)'].replace(2, 0)
 # Pandas的操作通常不是原地修改(Pandas默认返回新对象)
 # 所以需要赋值，即返回修改后的新Series对象
 
-# 3. 处理分类变量：将sex、drink、smk中的2转为0（假设2表示否定/女性，需根据实际含义调整）
+# 1.3. 处理分类变量：将sex、drink、smk中的2转为0（假设2表示否定/女性，需根据实际含义调整）
 for col in ['sex', 'drink', 'smk', 'family']:
     df[col] = df[col].replace(2, 0)
 # 针对[]里的每个指定列，将2替换为0
 # 为什么不合并group(2对照,1病例)这一列
 
-# 4. 删除无关列：ID列不参与建模(防止这些非特征数据干扰模型训练)
+# 1.4. 删除无关列：ID列不参与建模(防止这些非特征数据干扰模型训练)
 df.drop('ID', axis=1, inplace=True)
 # df.drop()功能：删除行或列
 # axis(操作轴方向：0=行，1=列)
@@ -31,14 +30,14 @@ df.drop('ID', axis=1, inplace=True)
 # 而不是返回一个新的副本，这样避免了重新赋值的麻烦，
 # 但需要注意inplace的使用可能带来的问题，比如数据被意外修改
 
-# 5. 检查缺失值
+# 1.5. 检查缺失值
 print("缺失值统计：\n", df.isnull().sum())
 # df.isnull()方法的作用是生成一个布尔类型的DataFrame，
 # 其中每个元素表示原数据中的对应位置是否为缺失值（NaN或None）
 # .sum()方法会对这些布尔值进行求和，
 # 因为True被视为1，False为0，所以每列的缺失值数量会被计算出来
 
-# 6. 填充缺失值（假设用中位数填充数值型，众数填充分类型）
+# 1.6. 填充缺失值（假设用中位数填充数值型，众数填充分类型）
 numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
 categorical_cols = ['sex', 'drink', 'smk', 'family']
 # 第一句————自动识别数值型列
@@ -85,7 +84,7 @@ for col in categorical_cols:  # 遍历所有分类型列
         # [0]取第一个众数（当存在多个众数时）
         df[col].fillna(df[col].mode()[0], inplace=True)
 
-# 7. 划分数据集
+# 1.7. 划分数据集
 X = df.drop('group(2对照,1病例)', axis=1)
 y = df['group(2对照,1病例)']
 X_train, X_test, y_train, y_test = train_test_split(
@@ -133,7 +132,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 #     y_train	Series	训练集标签
 #     y_test	Series	测试集标签
 
-# 8. 数据标准化
+# 1.8. 数据标准化
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
