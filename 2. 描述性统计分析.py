@@ -1,5 +1,5 @@
 # 2. 描述性统计分析
-# 2.1. 数据概况分析
+# 2.1 数据概况分析
 print("数据概况：")
 print(df.describe().round(2))  # 数值型变量描述统计，保留2位小数
 # describe()是Pandas中的一个方法，用于生成常用统计量(计数、均值、标准差、最小值、四分位数、中位数和最大值)
@@ -8,7 +8,7 @@ print(df.describe().round(2))  # 数值型变量描述统计，保留2位小数
 # 每个方法都有返回对象，df.describe()生成另一个DataFrame，
 # 然后调用round(2)对其进行处理
 
-# 2.2. 类别变量分布分析
+# 2.2 类别变量分布分析
 print("\n类别变量分布：")
 for col in ['sex', 'drink', 'smk']:
     print(f"\n{col}分布：")
@@ -36,14 +36,14 @@ for col in ['sex', 'drink', 'smk']:
 # 0    0.5
 # Name: smk, dtype: float64
 
-# 2.3. 目标变量平衡性检查
+# 2.3 目标变量平衡性检查
 print("\n病例/对照组比例：")
 print(df['group(2对照,1病例)'].value_counts(normalize=True))
 # 代码意思同上
 # 代码意义如下：
 # 验证是否严重不平衡（如病例:对照=1:9时需要采样处理），这对所有分类模型都至关重要
 
-# 2.4. 相关性初筛（耗时操作，大数据时慎用）
+# 2.4 相关性初筛（耗时操作，大数据时慎用）
 corr_matrix = df[numeric_cols].corr().abs()
 high_corr = corr_matrix[corr_matrix > 0.7].stack().reset_index()
 high_corr = high_corr[high_corr['level_0'] != high_corr['level_1']]  # 排除对角线
