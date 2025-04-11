@@ -8,7 +8,8 @@ from sklearn.preprocessing import StandardScaler
 # 1. 读取Excel文件
 df = pd.read_excel('重金属.xlsx', sheet_name='Sheet3')
 # pandas中的read_excel()方法————>功能：专门解析Excel文件的函数，将表格结构转换为内存中的DataFrame对象
-# DataFrame的概念，类似于Excel表格，有行和列的结构，方便后续处理
+# df应该是一个DataFrame对象，也就是二维的表格型数据结构，
+# 有行和列的结构，类似于Excel表格，方便后续处理
 # 返回值df的数据类型：pandas.DataFrame
 
 # 2. 处理目标变量：将group(2对照,1病例)中的2（对照）转为0，1（病例）保持为1
