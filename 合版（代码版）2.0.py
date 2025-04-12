@@ -111,7 +111,6 @@ importances.nlargest(10).sort_values(ascending=False).plot(kind='barh', color='d
 plt.title('随机森林特征重要性（Top 10）')
 plt.xlabel('重要性得分')
 
-
 # 2.5.2 多重共线性检测
 vif_data = pd.DataFrame() # 初始化一个空的Pandas DataFrame，用于后续存储特征名称及其对应的方差膨胀系数（VIF）值
 vif_data["feature"] = X.columns # 将原始数据集 X 的列名（即特征名称）存入DataFrame的 feature 列<创建这列>
