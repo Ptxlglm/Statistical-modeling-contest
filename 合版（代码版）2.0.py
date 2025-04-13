@@ -10,6 +10,12 @@ from sklearn.ensemble import RandomForestClassifier
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.linear_model import LassoCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.utils import resample
+from scipy.optimize import minimize
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve, auc
+import warnings
+warnings.filterwarnings('ignore')
 
 # 添加全局设置（所有图表生效）
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置中文字体（黑体）
@@ -203,3 +209,135 @@ plt.show()
 # 3.7 保存重要特征结果（供后续建模使用）
 selected_features_df = pd.DataFrame({'Selected_Features': selected_features})  # 创建特征列表的DataFrame
 selected_features_df.to_csv('selected_features_lasso.csv', index=False)  # 保存到CSV文件（无行索引）
+
+
+
+# 4. WQS回归模型构建与混合物效应分析
+# 数据准备
+# 根据前面预处理后的数据
+X = df[['Zn', 'Ni', 'Cu', 'Pb', 'Fe', 'Cd']]  # 选择重金属暴露变量
+y = df['group(2对照,1病例)']
+
+# 参数配置
+n_quantiles = 4  # 分位数划分数量
+n_boot = 700  # 自举次数   设置Bootstrap重抽样次数   Bootstrap通过有放回抽样估计统计量的抽样分布   科研推荐：500-1000次（需平衡计算成本与精度）
+components = X.columns.tolist()  # 混合物成分名称   X.columns → 获取DataFrame的列索引（Index对象）
+np.random.seed(42)  # 固定随机种子
+
+# 分位数转换函数
+def quantile_transform(data, n_quantiles):
+    # Step1: 强制筛选数值型列并复制数据（避免修改原始DataFrame）
+    numeric_data = data.select_dtypes(include=np.number).copy()
+    # Step2: 验证数据有效性
+    if numeric_data.empty:
+        raise ValueError("输入数据无数值型列！")
+    # Step3：分位数转换
+    return numeric_data.apply(lambda x: pd.qcut(x, n_quantiles,
+                                        labels=False,  # 返回分位区间的整数编码（如 0,1,2,3）而非区间对象————若设置为 True 会返回类似 "(0.25, 0.5]" 的区间字符串标签
+                                        duplicates='drop') + 1, axis=0)
+
+X = df.select_dtypes(include=np.number).copy()  # 确保 X 是 DataFrame 且所有列为数值型
+X_quant = quantile_transform(X, n_quantiles)  # 执行分位数转换
+
+# WQS核心建模函数
+def wqs_model(X, y, n_boot=700):
+    boot_weights = []  # 存储每次Bootstrap抽样的 特征权重（污染物贡献度）
+    boot_or = []  # 存储每次抽样的 混合效应OR值（整体暴露风险）
+    boot_auc = []  # 存储每次Bootstrap的AUC值
+
+    for i in range(n_boot):
+        # 自举抽样
+        X_resampled, y_resampled = resample(X, y, random_state=42 + i)
+
+        # 定义优化目标函数
+        def objective(weights):
+            wqs_index = np.dot(X_resampled.values, weights)
+            model = LogisticRegression(penalty=None, max_iter=1000,
+                                       solver='lbfgs').fit(wqs_index.reshape(-1, 1), y_resampled)
+            return -model.score(wqs_index.reshape(-1, 1), y_resampled)
+
+        # 设置约束条件（权重和为1）
+        cons = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})  # 权重和约束
+        bounds = [(0, 1) for _ in range(X.shape[1])]  # 非负约束
+        init_weights = np.ones(X.shape[1]) / X.shape[1]  # 初始权重
+
+        # 执行优化
+        result = minimize(objective, init_weights,
+                          method='SLSQP', bounds=bounds,
+                          constraints=cons,
+                          options={'maxiter': 1000})
+
+        if result.success:  # 验证优化过程是否收敛到有效解，避免使用未收敛或错误的优化结果（如因迭代次数不足导致的失败）
+            # 保存权重
+            boot_weights.append(result.x)
+
+            # # 计算全数据集的WQS指数和OR值
+            final_index = np.dot(X.values, result.x)
+            final_model = LogisticRegression(penalty=None,
+                                             max_iter=1000).fit(final_index.reshape(-1, 1), y)
+            beta = final_model.coef_[0][0]
+            boot_or.append(np.exp(beta))  # OR值
+
+            # 计算当前权重下的AUC值
+            fpr, tpr, _ = roc_curve(y, final_index)
+            auc_value = auc(fpr, tpr)
+            boot_auc.append(auc_value)  # AUC值
+
+        # 在函数内计算置信区间
+        or_ci = np.percentile(boot_or, [2.5, 97.5])
+        auc_ci = np.percentile(boot_auc, [2.5, 97.5])
+
+    return np.array(boot_weights), np.array(boot_or), np.array(boot_auc), or_ci, auc_ci  # 返回AUC置信区间
+
+# 调用函数时接收所有返回值   # 运行WQS模型
+weights, or_values, auc_values, or_ci, auc_ci = wqs_model(X_quant, y, n_boot=700)
+
+# 后续分析直接使用返回的置信区间
+print(f"AUC 95%CI: {auc_ci[0]:.2f}-{auc_ci[1]:.2f}")
+
+# 结果分析
+# 计算统计量
+mean_weights = np.mean(weights, axis=0)
+std_weights = np.std(weights, axis=0)
+mean_or = np.mean(or_values)
+
+# 可视化权重分布
+plt.figure(figsize=(10, 6))
+plt.barh(components, mean_weights, xerr=std_weights,
+         color='teal', alpha=0.7, capsize=5)
+plt.axvline(0, color='gray', linestyle='--')
+plt.xlabel('权重系数')
+plt.title('污染物权重分布（带标准差）')
+plt.gca().invert_yaxis()
+plt.grid(axis='x', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.show()
+
+# 计算综合WQS指数
+wqs_index = np.dot(X_quant.values, mean_weights)
+
+# ROC曲线评估
+fpr, tpr, _ = roc_curve(y, wqs_index)  # 真实标签 y 和预测指数 wqs_index（WQS指数）
+roc_auc = auc(fpr, tpr)  # 假阳性率（FPR）、真阳性率（TPR）
+
+plt.figure(figsize=(8, 8))
+plt.plot(fpr, tpr, color='darkorange', lw=2,  # linewidth线宽
+         label=f'AUC = {roc_auc:.2f} (95%CI: {auc_ci[0]:.2f}-{auc_ci[1]:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', linestyle='--')  # 绘制对角线，表示无判别能力的模型（AUC=0.5），用于对比实际模型性能
+plt.xlabel('假阳性率')
+plt.ylabel('真阳性率')
+plt.title('WQS模型ROC曲线')
+plt.legend(loc="lower right")  # 图例显示在右下方
+plt.grid(alpha=0.3)  # 添加半透明网格线(grid网格)
+plt.show()
+
+# 结果输出
+print(f"混合物效应OR值: {mean_or:.2f} (95%CI: {or_ci[0]:.2f}-{or_ci[1]:.2f})")
+print("\n污染物贡献权重：")
+for comp, weight, std in zip(components, mean_weights, std_weights):
+    print(f"• {comp}: {weight:.3f} ± {std:.3f}")  # 列出所有污染物的 权重均值 和 标准差
+
+# 敏感性分析（可选）
+print("\n权重稳定性分析：")
+weight_stability = pd.DataFrame(weights, columns=components)
+print(weight_stability.describe().loc[['mean', 'std', 'min', 'max']].T.round(3))
