@@ -113,7 +113,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 #     X：特征矩阵（所有输入变量）
 #     y：目标变量（预测标签）
 #     test_size=0.3：测试集比例30%（训练集自动70%）
-#     stratify=y：分层抽样，保持y的类别分布
+#     stratify(分层)=y：分层抽样，保持y的类别分布
 #     random_state=42：随机种子，保证可重复性
 
 # 数据分割原理：
@@ -125,10 +125,10 @@ X_train, X_test, y_train, y_test = train_test_split(
         # 当y为不平衡分类数据（如病例:对照=1:9）时：
         # 强制保持训练/测试集中该比例一致
         # 避免随机分割导致子集比例偏移
-    # random_state机制：
-        # 指定伪随机数生成器的种子
-        # 相同种子保证每次分割结果相同
-        # 重要用途：实验可复现性
+# random_state机制：
+    # 指定伪随机数生成器的种子
+    # 相同种子保证每次分割结果相同
+    # 重要用途：实验可复现性
 
 # 输出对象说明：
 #     变量名	数据类型	作用
@@ -162,7 +162,7 @@ X_test_scaled = scaler.transform(X_test)
 
 # 第二句————训练并转换训练集
 # 语法解析：
-# **.fit()**：
+# .fit()：
 # 计算训练数据的均值（μ）和标准差（σ）
 # 数学公式：
 # μ = np.mean(X_train, axis=0)
@@ -170,7 +170,7 @@ X_test_scaled = scaler.transform(X_test)
 # 存储计算结果到scaler对象的属性中：
 # scaler.mean_     # 均值向量
 # scaler.scale_    # 标准差向量
-# **.transform()**：
+# .transform()：
 # 应用标准化公式转换数据：
 # X_scaled = (X - μ) / σ
 # 输出为NumPy数组（维度与输入一致）
@@ -191,13 +191,13 @@ X_test_scaled = scaler.transform(X_test)
 # 数学运算：
 # X_test_scaled = (X_test - scaler.mean_) / scaler.scale_
 
-# 输出数据结构
-# 变量名	数据类型	维度	数值特性
-# X_train_scaled	NumPy ndarray	(n_samples, n_features)	各列均值≈0，标准差≈1
-# X_test_scaled	NumPy ndarray	(m_samples, n_features)	同训练集缩放参数
-
 # 输出处理后的数据示例
 print("\n处理后的训练集维度:", X_train_scaled.shape)
 print("处理后的测试集维度:", X_test_scaled.shape)
 # shape属性：NumPy数组/Pandas DataFrame的固定属性，
 # 返回数据维度元组 (n_samples, n_features)
+
+# 输出数据结构
+# 变量名	数据类型	维度	数值特性
+# X_train_scaled	NumPy ndarray	(n_samples, n_features)	各列均值≈0，标准差≈1
+# X_test_scaled	    NumPy ndarray	(m_samples, n_features)	同训练集缩放参数
