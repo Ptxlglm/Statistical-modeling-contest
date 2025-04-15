@@ -1,24 +1,30 @@
 # 4. WQS回归模型构建与混合物效应分析
 # 数据准备
 # 根据前面预处理后的数据
-X = df[['Zn', 'Ni', 'Cu', 'Pb', 'Fe', 'Cd']]  # 选择重金属暴露变量
+metal_cols = ['Zn', 'Ni', 'Cu', 'Pb', 'Fe']  # 根据数据列名调整
+X = df[metal_cols].copy()
+# X = df[['Zn', 'Ni', 'Cu', 'Pb', 'Fe']]  # 选择重金属暴露变量
 y = df['group(2对照,1病例)']
 
 # 参数配置
 n_quantiles = 4  # 分位数划分数量
 n_boot = 700  # 自举次数   设置Bootstrap重抽样次数   Bootstrap通过有放回抽样估计统计量的抽样分布   科研推荐：500-1000次（需平衡计算成本与精度）
-components = X.columns.tolist()  # 混合物成分名称   X.columns → 获取DataFrame的列索引（Index对象）
+components = metal_cols  # 确保长度与mean_weights、std_weights一致
+# components = X.columns.tolist()  # 混合物成分名称   X.columns → 获取DataFrame的列索引（Index对象）
 np.random.seed(42)  # 固定随机种子
 
 # 分位数转换函数
 def quantile_transform(data, n_quantiles):
-    # Step1: 强制筛选数值型列并复制数据（避免修改原始DataFrame）
-    numeric_data = data.select_dtypes(include=np.number).copy()
-    # Step2: 验证数据有效性
-    if numeric_data.empty:
-        raise ValueError("输入数据无数值型列！")
-    # Step3：分位数转换
-    return numeric_data.apply(lambda x: pd.qcut(x, n_quantiles,
+    # # Step1: 强制筛选数值型列并复制数据（避免修改原始DataFrame）
+    # numeric_data = data.select_dtypes(include=np.number).copy()
+    # # Step2: 验证数据有效性
+    # if numeric_data.empty:
+    #     raise ValueError("输入数据无数值型列！")
+    # # Step3：分位数转换
+    # return numeric_data.apply(lambda x: pd.qcut(x, n_quantiles,
+    #                                     labels=False,  # 返回分位区间的整数编码（如 0,1,2,3）而非区间对象————若设置为 True 会返回类似 "(0.25, 0.5]" 的区间字符串标签
+    #                                     duplicates='drop') + 1, axis=0)
+    return data.apply(lambda x: pd.qcut(x, n_quantiles,
                                         labels=False,  # 返回分位区间的整数编码（如 0,1,2,3）而非区间对象————若设置为 True 会返回类似 "(0.25, 0.5]" 的区间字符串标签
                                         duplicates='drop') + 1, axis=0)
 # 若省略 .copy()，直接修改 numeric_data 可能导致原始 data 被意外修改（Pandas的视图机制）
@@ -43,7 +49,7 @@ def quantile_transform(data, n_quantiles):
 # data = df.select_dtypes(include=np.number).columns
 # 注意：.columns表示转换为列名列表&&函数本身缺乏防御性
 
-X = df.select_dtypes(include=np.number).copy()  # 确保 X 是 DataFrame 且所有列为数值型
+# X = df.select_dtypes(include=np.number).copy()  # 确保 X 是 DataFrame 且所有列为数值型
 X_quant = quantile_transform(X, n_quantiles)  # 执行分位数转换
 # X是原始的数值型DataFrame，X_quant是转换后的分位数等级DataFrame(每个数值被替换为对应的 分位等级（1到n_quantiles）)
 # .copy()
@@ -152,7 +158,7 @@ def wqs_model(X, y, n_boot=700):
             # 保存权重
             boot_weights.append(result.x)
 
-            # # 计算全数据集的WQS指数和OR值
+            # 计算全数据集的WQS指数和OR值
             final_index = np.dot(X.values, result.x)
             final_model = LogisticRegression(penalty=None,
                                              max_iter=1000).fit(final_index.reshape(-1, 1), y)
@@ -185,8 +191,8 @@ def wqs_model(X, y, n_boot=700):
             # ** boot_or **：列表，存储所有Bootstrap抽样的OR值，用于计算总体OR及其置信区间
 
         # 在函数内计算置信区间
-        or_ci = np.percentile(boot_or, [2.5, 97.5])
-        auc_ci = np.percentile(boot_auc, [2.5, 97.5])
+        or_ci = np.percentile(boot_or, [2.5, 97.5]) if boot_or else [np.nan, np.nan]
+        auc_ci = np.percentile(boot_auc, [2.5, 97.5]) if boot_auc else [np.nan, np.nan]
         # 输出：or_ci（置信区间上下限，如 [1.2, 2.0]）
         # 作用：量化混合物效应 OR 值的统计显著性（若区间不包含1，则效应显著）。
 
@@ -211,7 +217,7 @@ mean_or = np.mean(or_values)
 
 # 可视化权重分布
 plt.figure(figsize=(10, 6))
-plt.barh(components, mean_weights, xerr=std_weights,
+plt.barh(components, mean_weights[:len(components)], xerr=std_weights[:len(components)],  # 确保mean_weights/std_weights长度与components一致）
          color='teal', alpha=0.7, capsize=5)
 plt.axvline(0, color='gray', linestyle='--')
 plt.xlabel('权重系数')

@@ -4,6 +4,23 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.ensemble import RandomForestClassifier
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from sklearn.linear_model import LassoCV
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.utils import resample
+from scipy.optimize import minimize
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve, auc
+import warnings
+warnings.filterwarnings('ignore')
+
+# 添加全局设置（所有图表生效）
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置中文字体（黑体）
+plt.rcParams['font.family'] = 'sans-serif'    # 全局字体类型
+plt.rcParams['axes.unicode_minus'] = False    # 解决负号显示乱码
 
 # 1.1 读取Excel文件
 df = pd.read_excel('重金属.xlsx', sheet_name='Sheet3')
@@ -87,7 +104,6 @@ for col in categorical_cols:  # 遍历所有分类型列
         # [0]取第一个众数（当存在多个众数时）
         df[col].fillna(df[col].mode()[0], inplace=True)
 
-df['Pb_Cd_interaction'] = df['Pb'] * df['Cd']
 df['Cu_Zn_interaction'] = df['Cu'] * df['Zn']
 # 添加交互项（如重金属间的协同效应）提高测试集R²
 
