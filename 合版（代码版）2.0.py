@@ -16,6 +16,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc
 import warnings
 warnings.filterwarnings('ignore')
+from sklearn.metrics import (accuracy_score, confusion_matrix,
+                            classification_report, roc_auc_score)
 
 # 添加全局设置（所有图表生效）
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置中文字体（黑体）
@@ -349,3 +351,97 @@ for comp, weight, std in zip(components, mean_weights, std_weights):
 print("\n权重稳定性分析：")
 weight_stability = pd.DataFrame(weights, columns=components)
 print(weight_stability.describe().loc[['mean', 'std', 'min', 'max']].T.round(3))
+
+
+
+# 导入必要的库
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.metrics import (accuracy_score, confusion_matrix,
+                            classification_report, roc_auc_score,
+                            roc_curve, auc)
+
+# 5. 随机森林模型
+# 5.1 基础模型训练
+base_rf = RandomForestClassifier(random_state=42)
+base_rf.fit(X_train_scaled, y_train)
+
+# 5.2 网格搜索调参
+param_grid = {
+    'n_estimators': [100, 200, 300],    # 树的数量   文献常用100-500，此处选择中等范围平衡效率
+    'max_depth': [None, 10, 20],        # 树的最大深度   包含None探索数据固有复杂度
+    'min_samples_split': [2, 5],       # 节点分裂最小样本数   测试模型对稀疏信号的敏感性
+    'class_weight': ['balanced', None] # 处理类别不平衡   验证是否需要补偿类别不平衡
+}
+
+grid_search = GridSearchCV(estimator=RandomForestClassifier(random_state=42),
+                           param_grid=param_grid,
+                           cv=5,  # 5折交叉验证
+                           scoring='roc_auc',
+                           n_jobs=-1)  # 使用全部CPU核心并行计算，加速搜索过程
+grid_search.fit(X_train_scaled, y_train)
+
+# 获取最佳模型
+best_rf = grid_search.best_estimator_
+print(f"最佳参数组合: {grid_search.best_params_}")
+
+# 5.3 使用最佳模型预测
+y_pred = best_rf.predict(X_test_scaled)
+y_proba = best_rf.predict_proba(X_test_scaled)[:, 1]  # 预测概率
+
+# 5.4 模型评估
+# 基础指标
+print("\n测试集准确率: {:.3f}".format(accuracy_score(y_test, y_pred)))
+print("测试集AUC: {:.3f}".format(roc_auc_score(y_test, y_proba)))
+
+# 混淆矩阵
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+plt.xlabel('预测标签')
+plt.ylabel('真实标签')
+plt.title('混淆矩阵')
+plt.show()
+
+# 分类报告
+print("\n分类报告:\n", classification_report(y_test, y_pred))
+
+# 5.5 交叉验证评估稳定性
+cv_scores = cross_val_score(best_rf,  # 交叉 验证
+                           X_train_scaled,
+                           y_train,
+                           cv=5,
+                           scoring='roc_auc')  # 使用AUC（ROC曲线下面积）作为评估指标
+print("交叉验证AUC: {:.3f} (±{:.3f})".format(cv_scores.mean(), cv_scores.std()))
+
+# 5.6 ROC曲线绘制
+fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+plt.plot(fpr, tpr, color='darkorange', lw=2,
+         label='ROC曲线 (AUC = %0.2f)' % roc_auc)  # plt.plot(x, y, 样式参数)
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])  # x轴范围固定为0到1   FPR的理论范围为[0,1]，固定显示避免空白。
+plt.ylim([0.0, 1.05])  # y轴范围扩展至1.05   TPR通常≤1，但扩展5%空间防止图例或标签被截断。
+plt.xlabel('假阳性率')  # x轴含义(标签)
+plt.ylabel('真阳性率')  # y轴含义(标签)
+plt.title('随机森林ROC曲线')
+plt.legend(loc="lower right")  # 图例位置在右下方
+plt.show()
+
+# 5.7 特征重要性分析
+importances = best_rf.feature_importances_  # 提取模型学习到的特征重要性得分（数值化评估特征贡献）
+indices = np.argsort(importances)[::-1]  # 生成按重要性 降序排列 的索引，用于后续可视化或分析时的特征排序
+
+# 垂直条形图
+plt.figure(figsize=(10, 6))  # 宽 高   加宽加高画布适应更多特征，避免标签重叠
+plt.title("特征重要性排序", fontsize=14, pad=20)
+plt.xlabel("重要性得分", fontsize=12, labelpad=10)
+plt.ylabel("特征名称", fontsize=12, labelpad=10)
+plt.bar(range(X_train.shape[1]), importances[indices],
+        color="skyblue", align="center")
+plt.xticks(range(X_train.shape[1]), X_train.columns[indices],
+           rotation=45, ha='right')  # 45度倾斜+右对齐防止重叠
+plt.xlim([-1, X_train.shape[1]])
+plt.tight_layout()  # 自动调整布局
+plt.show()
