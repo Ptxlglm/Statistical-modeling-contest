@@ -77,8 +77,8 @@ best_rf = grid_search.best_estimator_
 print(f"最佳参数组合: {grid_search.best_params_}")
 
 # 5.3 使用最佳模型预测
-y_pred = best_rf.predict(X_test_scaled)
-y_proba = best_rf.predict_proba(X_test_scaled)[:, 1]  # 预测概率
+y_pred = best_rf.predict(X_test_scaled)  # 直接预测类别
+y_proba = best_rf.predict_proba(X_test_scaled)[:, 1]  # 预测正类概率
 # predict()方法
 # 输入特征数据，输出预测的类别标签（二分类中为0或1）
 # 例：一维数组[0, 1, 0, 1, 1, ...]（0=对照组，1=病例组）
@@ -208,7 +208,7 @@ indices = np.argsort(importances)[::-1]  # 生成按重要性 降序排列 的�
 
 # 垂直条形图
 plt.figure(figsize=(10, 6))  # 宽 高   加宽加高画布适应更多特征，避免标签重叠
-plt.title("特征重要性排序", fontsize=14, pad=20)
+plt.title("随机森林特征重要性排序", fontsize=14, pad=20)
 plt.xlabel("重要性得分", fontsize=12, labelpad=10)
 plt.ylabel("特征名称", fontsize=12, labelpad=10)
 plt.bar(range(X_train.shape[1]), importances[indices],
@@ -218,3 +218,33 @@ plt.xticks(range(X_train.shape[1]), X_train.columns[indices],
 plt.xlim([-1, X_train.shape[1]])
 plt.tight_layout()  # 自动调整布局
 plt.show()
+
+
+
+
+# plt.figure(figsize=(10, 8))  # 加大高度适应更多特征
+# plt.title("随机森林特征重要性排序", fontsize=14, pad=20)
+# plt.xlabel("重要性得分", fontsize=12, labelpad=10)
+# # 绘制水平条形图（注意 y 轴反转排序）
+# plt.barh(range(X_train.shape[1]), importances[indices],
+#          color="steelblue", height=0.8)  # 调整颜色和条宽
+# # 设置Y轴标签（特征名）
+# plt.yticks(range(X_train.shape[1]),
+#            X_train.columns[indices],
+#            fontsize=10)  # 缩小字体适应长文本
+# plt.gca().invert_yaxis()  # 反转Y轴，使最重要的特征显示在顶部
+# plt.grid(axis='x', linestyle='--', alpha=0.6)  # 添加辅助网格线
+# plt.tight_layout()
+# plt.show()
+
+# 标题与轴标签：
+# 使用 plt.title() plt.xlabel() plt.ylabel() 明确图表含义
+# 参数 fontsize 控制字体大小，labelpad 调整标签与轴的距离
+# 水平条形图优势：
+# 避免长特征名重叠（无需旋转标签）
+# 通过 invert_yaxis() 让重要性排序更直观（从上到下递减）
+# 可视化增强：
+# grid() 添加网格线提高可读性
+# color 参数使用更专业的色系（如 steelblue）
+# 排序逻辑：
+# 确保 indices = np.argsort(importances)[::-1] 特征已按重要性降序排列

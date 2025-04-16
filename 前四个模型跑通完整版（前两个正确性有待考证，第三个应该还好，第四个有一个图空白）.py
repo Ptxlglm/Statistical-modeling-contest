@@ -13,12 +13,9 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.utils import resample
 from scipy.optimize import minimize
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve, auc
 import warnings
 warnings.filterwarnings('ignore')
-from sklearn.metrics import (accuracy_score, confusion_matrix,
-                            classification_report, roc_auc_score,
-                            roc_curve, auc)
-import xgboost as xgb
 
 # 添加全局设置（所有图表生效）
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置中文字体（黑体）
@@ -352,15 +349,6 @@ for comp, weight, std in zip(components, mean_weights, std_weights):
 print("\n权重稳定性分析：")
 weight_stability = pd.DataFrame(weights, columns=components)
 print(weight_stability.describe().loc[['mean', 'std', 'min', 'max']].T.round(3))
-
-
-
-# 导入必要的库
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV, cross_val_score
-from sklearn.metrics import (accuracy_score, confusion_matrix,
-                            classification_report, roc_auc_score,
-                            roc_curve, auc)
 
 # 5. 随机森林模型
 # 5.1 基础模型训练
