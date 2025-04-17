@@ -2,25 +2,20 @@
 # 导入必要的库
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.optimize import minimize
-import warnings
-warnings.filterwarnings('ignore')
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.linear_model import LassoCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.utils import resample
+from scipy.optimize import minimize
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (accuracy_score, confusion_matrix,
-                            classification_report, roc_auc_score,
-                            roc_curve, auc)
-import xgboost as xgb
+from sklearn.metrics import roc_curve, auc
+import warnings
+warnings.filterwarnings('ignore')
 
 # 添加全局设置（所有图表生效）
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 设置中文字体（黑体）
@@ -355,15 +350,6 @@ print("\n权重稳定性分析：")
 weight_stability = pd.DataFrame(weights, columns=components)
 print(weight_stability.describe().loc[['mean', 'std', 'min', 'max']].T.round(3))
 
-
-
-# 导入必要的库
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV, cross_val_score
-from sklearn.metrics import (accuracy_score, confusion_matrix,
-                            classification_report, roc_auc_score,
-                            roc_curve, auc)
-
 # 5. 随机森林模型
 # 5.1 基础模型训练
 base_rf = RandomForestClassifier(random_state=42)
@@ -548,7 +534,6 @@ plt.show()
 
 # 6.9 保存模型
 model_xgb.save_model('xgb_model.json')  # 保存为JSON格式
-
 
 
 # 7. 支持向量机(SVM)模型(二分类SVM)

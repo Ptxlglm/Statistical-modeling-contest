@@ -1,19 +1,19 @@
 # 4. WQS回归模型构建与混合物效应分析
-# 数据准备
+# 4.1 数据准备
 # 根据前面预处理后的数据
 metal_cols = ['Zn', 'Ni', 'Cu', 'Pb', 'Fe']  # 根据数据列名调整
 X = df[metal_cols].copy()
 # X = df[['Zn', 'Ni', 'Cu', 'Pb', 'Fe']]  # 选择重金属暴露变量
 y = df['group(2对照,1病例)']
 
-# 参数配置
+# 4.2 参数配置
 n_quantiles = 4  # 分位数划分数量
 n_boot = 700  # 自举次数   设置Bootstrap重抽样次数   Bootstrap通过有放回抽样估计统计量的抽样分布   科研推荐：500-1000次（需平衡计算成本与精度）
 components = metal_cols  # 确保长度与mean_weights、std_weights一致
 # components = X.columns.tolist()  # 混合物成分名称   X.columns → 获取DataFrame的列索引（Index对象）
 np.random.seed(42)  # 固定随机种子
 
-# 分位数转换函数
+# 4.3 分位数转换函数
 def quantile_transform(data, n_quantiles):
     # # Step1: 强制筛选数值型列并复制数据（避免修改原始DataFrame）
     # numeric_data = data.select_dtypes(include=np.number).copy()
@@ -56,7 +56,7 @@ X_quant = quantile_transform(X, n_quantiles)  # 执行分位数转换
 # 作用：创建数据的独立副本，避免后续操作修改原始数据
 # 必要性：若省略，对 X 的修改可能影响原始 df（Pandas 默认返回视图而非副本）
 
-# WQS核心建模函数
+# 4.4 WQS核心建模函数
 def wqs_model(X, y, n_boot=700):
     boot_weights = []  # 存储每次Bootstrap抽样的 特征权重（污染物贡献度）
     boot_or = []  # 存储每次抽样的 混合效应OR值（整体暴露风险）
@@ -198,7 +198,7 @@ def wqs_model(X, y, n_boot=700):
 
     return np.array(boot_weights), np.array(boot_or), np.array(boot_auc), or_ci, auc_ci  # 返回AUC置信区间
 
-# 调用函数时接收所有返回值   # 运行WQS模型
+# 4.5 调用函数时接收所有返回值   # 运行WQS模型
 weights, or_values, auc_values, or_ci, auc_ci = wqs_model(X_quant, y, n_boot=700)
 # 将列表 boot_weights（Bootstrap权重集合）和 boot_or（Bootstrap OR值集合）
 # 转换为 NumPy数组，返回形式为 (权重矩阵, OR值数组)
@@ -206,7 +206,7 @@ weights, or_values, auc_values, or_ci, auc_ci = wqs_model(X_quant, y, n_boot=700
 # 后续分析直接使用返回的置信区间
 print(f"AUC 95%CI: {auc_ci[0]:.2f}-{auc_ci[1]:.2f}")
 
-# 结果分析
+# 4.6 结果分析
 # 计算统计量
 mean_weights = np.mean(weights, axis=0)
 std_weights = np.std(weights, axis=0)
@@ -215,7 +215,7 @@ mean_or = np.mean(or_values)
 # 得到 95% 置信区间（95% Confidence Interval, CI）
 # 输入：or_values（Bootstrap 抽样后的 OR 值数组，形状 (n_boot,)）
 
-# 可视化权重分布
+# 4.7 可视化权重分布
 plt.figure(figsize=(10, 6))
 plt.barh(components, mean_weights[:len(components)], xerr=std_weights[:len(components)],  # 确保mean_weights/std_weights长度与components一致）
          color='teal', alpha=0.7, capsize=5)
@@ -248,10 +248,10 @@ plt.show()
 # 权重的 波动范围（误差线，反映Bootstrap结果的稳定性）
 # 通过颜色、布局和网格优化可读性，便于快速识别关键污染物。
 
-# 计算综合WQS指数
+# 4.8 计算综合WQS指数
 wqs_index = np.dot(X_quant.values, mean_weights)
 
-# ROC曲线评估
+# 4.9 ROC曲线评估
 fpr, tpr, _ = roc_curve(y, wqs_index)  # 真实标签 y 和预测指数 wqs_index（WQS指数）
 roc_auc = auc(fpr, tpr)  # 假阳性率（FPR）、真阳性率（TPR）
 # auc：计算ROC曲线下面积（AUC），量化模型区分病例与对照的能力（0.5~1，越大越好）
@@ -272,7 +272,7 @@ plt.show()
 # AUC > 0.7：模型具有较好判别能力
 # AUC接近1：模型几乎完美区分病例与对照
 
-# 结果输出
+# 4.10 结果输出
 print(f"混合物效应OR值: {mean_or:.2f} (95%CI: {or_ci[0]:.2f}-{or_ci[1]:.2f})")
 print("\n污染物贡献权重：")
 for comp, weight, std in zip(components, mean_weights, std_weights):
@@ -281,7 +281,7 @@ for comp, weight, std in zip(components, mean_weights, std_weights):
 # print(f"混合物效应OR值: {mean_or:.2f} (95%CI: {or_ci[0]:.2f}-{or_ci[1]:.2f})")
 # 输出加权分位数和（WQS）指数对应的 混合效应比值比（OR） 及其 95%置信区间
 
-# 敏感性分析（可选）
+# 4.11 敏感性分析（可选）
 print("\n权重稳定性分析：")
 weight_stability = pd.DataFrame(weights, columns=components)
 print(weight_stability.describe().loc[['mean', 'std', 'min', 'max']].T.round(3))

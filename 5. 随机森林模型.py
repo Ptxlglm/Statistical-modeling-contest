@@ -115,7 +115,6 @@ plt.xlabel('预测标签')
 plt.ylabel('真实标签')
 plt.title('混淆矩阵')
 plt.show()
-
 # confusion_matrix(y_test, y_pred)
 # 功能：计算混淆矩阵
 # 一个N×N矩阵（N为类别数），在二分类中为2×2矩阵，结构如下：
