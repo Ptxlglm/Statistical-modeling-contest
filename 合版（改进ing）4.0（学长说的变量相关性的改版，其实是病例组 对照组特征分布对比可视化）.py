@@ -193,6 +193,8 @@ sns.pairplot(df[['age', 'Zn', 'Ni', 'group(2对照,1病例)']], # 把这几列�
              hue='group(2对照,1病例)', plot_kws={'alpha':0.6})
 plt.suptitle('关键变量交互关系', y=1.02) # 标题定位：y=1.02 将主标题略微上移，避免与子图标题重叠
 
+plt.show()
+
 
 
 # # 数据整理：将三个变量从宽格式转为长格式
